@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>GHOST//CAM — MK.VII RECORDER UNIT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   GHOST//CAM — token system
+   void   #05070c   panel  rgba(10,16,28,.86)
+   cyan   #00f0ff   magenta #ff2e6d   amber  #ffb400
+   ink    #eaf6ff   ink-dim #6f93a8
+   ========================================================= */
+:root{
+  --void:#05070c;
+  --panel:rgba(9,15,26,.88);
+  --panel-2:rgba(13,20,34,.72);
+  --cyan:#00f0ff;
+  --cyan-dim:rgba(0,240,255,.35);
+  --magenta:#ff2e6d;
+  --magenta-dim:rgba(255,46,109,.35);
+  --amber:#ffb400;
+  --ink:#eaf6ff;
+  --ink-dim:#6f93a8;
+  --line:rgba(0,240,255,.28);
+  --font-display:'Orbitron',sans-serif;
+  --font-body:'Chakra Petch',sans-serif;
+  --font-mono:'Share Tech Mono',monospace;
+  --glow: 0 0 6px currentColor, 0 0 14px currentColor;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{
+  margin:0;padding:0;height:100%;width:100%;
+  background:var(--void);
+  color:var(--ink);
+  font-family:var(--font-body);
+  overflow:hidden;
+  -webkit-user-select:none;user-select:none;
+  overscroll-behavior:none;
+}
+
+/* ---------- ambient background : cheap, transform-only animation ---------- */
+#bg-fx{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;background:
+  radial-gradient(ellipse at 30% 20%, rgba(0,240,255,.07), transparent 55%),
+  radial-gradient(ellipse at 80% 85%, rgba(255,46,109,.06), transparent 55%),
+  var(--void);
+}
+#bg-fx .halftone{
+  position:absolute; inset:-25%; width:150%; height:150%;
+  background-image:radial-gradient(var(--cyan-dim) 1px, transparent 1.4px);
+  background-size:22px 22px;
+  opacity:.14;
+  transform:translate3d(0,0,0);
+  animation:driftDots 40s linear infinite;
+  will-change:transform;
+}
+#bg-fx .speedlines{
+  position:absolute; inset:-40% -10%; width:180%; height:180%;
+  background:repeating-linear-gradient(115deg, transparent 0 38px, rgba(0,240,255,.045) 38px 40px);
+  transform:translate3d(0,0,0) rotate(0deg);
+  animation:driftLines 26s linear infinite;
+  will-change:transform;
+}
+@keyframes driftDots{ 0%{transform:translate3d(0,0,0)} 100%{transform:translate3d(-22px,-22px,0)} }
+@keyframes driftLines{ 0%{transform:translate3d(-4%,0,0)} 100%{transform:translate3d(4%,0,0)} }
+
+body.low-power #bg-fx .halftone,
+body.low-power #bg-fx .speedlines{animation:none;}
+
+/* ---------- shell ---------- */
+.app-shell{
+  position:relative; z-index:1;
+  height:100%; width:100%;
+  display:flex; flex-direction:column;
+  padding:clamp(8px,1.4vw,18px);
+  gap:clamp(8px,1.2vw,14px);
+}
+
+/* ---------- header : mech HUD bar ---------- */
+.mech-header{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  flex-wrap:wrap;
+  background:var(--panel);
+  border:1px solid var(--line);
+  clip-path:polygon(0 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 18px));
+  padding:10px 18px;
+  box-shadow: inset 0 0 0 1px rgba(0,240,255,.06);
+}
+body.low-power .mech-header{box-shadow:none;}
+
+.brand{display:flex;align-items:baseline;gap:10px;}
+.brand .glyph{
+  font-family:var(--font-display); font-weight:800; font-size:clamp(16px,2vw,22px);
+  color:var(--cyan); letter-spacing:2px; text-shadow:var(--glow);
+}
+body.low-power .brand .glyph{text-shadow:none;}
+.brand .sub{
+  font-family:var(--font-mono); font-size:11px; color:var(--ink-dim); letter-spacing:2px;
+}
+
+.badge-row{display:flex; gap:8px; flex-wrap:wrap;}
+.badge{
+  font-family:var(--font-mono); font-size:11px; letter-spacing:1px;
+  padding:5px 10px; border:1px solid var(--line); color:var(--ink-dim);
+  clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+  display:flex; align-items:center; gap:6px; white-space:nowrap;
+  background:var(--panel-2);
+}
+.badge b{color:var(--ink); font-weight:600;}
+.badge.status.idle{color:var(--amber); border-color:rgba(255,180,0,.4);}
+.badge.status.live{color:var(--cyan); border-color:var(--cyan-dim);}
+.badge.status.rec{color:var(--magenta); border-color:var(--magenta-dim); animation:pulseText 1s infinite;}
+.badge.status.err{color:#ff4d4d; border-color:rgba(255,77,77,.5);}
+@keyframes pulseText{0%,100%{opacity:1}50%{opacity:.45}}
+body.low-power .badge.status.rec{animation:none;}
+
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:var(--glow);}
+body.low-power .dot{box-shadow:none;}
+
+/* ---------- main viewport frame : signature element ---------- */
+.viewport-wrap{
+  position:relative; flex:1; min-height:0;
+  display:flex; align-items:center; justify-content:center;
+}
+.viewport-frame{
+  position:relative;
+  width:100%; height:100%; max-width:1280px;
+  aspect-ratio:16/9;
+  margin:auto;
+  background:#000;
+  border:1px solid var(--line);
+  clip-path:polygon(26px 0,100% 0,100% calc(100% - 26px),calc(100% - 26px) 100%,0 100%,0 26px);
+  overflow:hidden;
+  box-shadow:0 0 0 1px rgba(0,240,255,.05), 0 30px 60px -20px rgba(0,0,0,.8);
+}
+body.low-power .viewport-frame{box-shadow:none;}
+
+#stage{width:100%; height:100%; display:block; background:#04060a;}
+
+/* corner brackets — svg, cheap, animate opacity/scale only */
+.brackets{position:absolute; inset:0; pointer-events:none;}
+.brackets svg{position:absolute; width:34px; height:34px; opacity:.85; color:var(--cyan);}
+.brackets .tl{top:6px; left:6px;}
+.brackets .tr{top:6px; right:6px; transform:scaleX(-1);}
+.brackets .bl{bottom:6px; left:6px; transform:scaleY(-1);}
+.brackets .br{bottom:6px; right:6px; transform:scale(-1,-1);}
+.brackets path{fill:none; stroke:currentColor; stroke-width:2.5;}
+.viewport-frame.armed .brackets svg{color:var(--magenta); animation:bracketPulse 1.1s ease-in-out infinite;}
+@keyframes bracketPulse{0%,100%{opacity:.55; transform-origin:center;}50%{opacity:1;}}
+body.low-power .viewport-frame.armed .brackets svg{animation:none; opacity:1;}
+
+.scan{
+  position:absolute; left:0; right:0; height:38%;
+  background:linear-gradient(to bottom, transparent, rgba(0,240,255,.05), transparent);
+  animation:scanSweep 4.5s linear infinite;
+  pointer-events:none;
+}
+@keyframes scanSweep{0%{top:-40%}100%{top:100%}}
+body.low-power .scan{display:none;}
+
+.viewport-placeholder{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  flex-direction:column; gap:10px; color:var(--ink-dim); text-align:center; padding:20px;
+}
+.viewport-placeholder .kanji{font-size:44px; color:var(--cyan-dim); font-family:var(--font-display);}
+.viewport-placeholder p{margin:0; font-family:var(--font-mono); font-size:12px; letter-spacing:1px; max-width:420px;}
+
+/* ---------- control deck ---------- */
+.deck{
+  background:var(--panel);
+  border:1px solid var(--line);
+  clip-path:polygon(0 12px,12px 0,calc(100% - 18px) 0,100% 18px,100% 100%,18px 100%,0 calc(100% - 12px));
+  padding:12px 16px;
+  display:flex; flex-direction:column; gap:10px;
+}
+
+.deck-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+.deck-label{
+  font-family:var(--font-mono); font-size:10px; color:var(--ink-dim); letter-spacing:2px;
+  min-width:74px;
+}
+
+.btn{
+  appearance:none; border:1px solid var(--line); background:var(--panel-2);
+  color:var(--ink); font-family:var(--font-body); font-weight:600; font-size:13px;
+  letter-spacing:1px; padding:11px 16px; min-height:44px;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  display:inline-flex; align-items:center; gap:8px; cursor:pointer;
+  transition:border-color .15s, color .15s, background .15s;
+}
+.btn:active{transform:translateY(1px);}
+.btn:disabled{opacity:.35; cursor:not-allowed;}
+.btn.cyan{color:var(--cyan); border-color:var(--cyan-dim);}
+.btn.cyan:not(:disabled):hover, .btn.cyan.active{background:rgba(0,240,255,.1); box-shadow:var(--glow); color:var(--cyan);}
+.btn.magenta{color:var(--magenta); border-color:var(--magenta-dim);}
+.btn.magenta:not(:disabled):hover, .btn.magenta.active{background:rgba(255,46,109,.12); box-shadow:var(--glow);}
+.btn.amber{color:var(--amber); border-color:rgba(255,180,0,.4);}
+.btn.amber.active{background:rgba(255,180,0,.12); box-shadow:var(--glow);}
+body.low-power .btn.cyan:not(:disabled):hover, body.low-power .btn.cyan.active,
+body.low-power .btn.magenta:not(:disabled):hover, body.low-power .btn.magenta.active,
+body.low-power .btn.amber.active{box-shadow:none;}
+
+.divider{width:1px; align-self:stretch; background:var(--line); margin:0 2px;}
+
+/* ---------- system log ---------- */
+.log{
+  font-family:var(--font-mono); font-size:11px; color:var(--ink-dim);
+  height:64px; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end;
+  gap:2px; border-top:1px dashed var(--line); padding-top:6px;
+}
+.log div{opacity:.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.log div b{color:var(--cyan); font-weight:400;}
+
+/* ---------- responsive : 10.5" tablet + phones ---------- */
+@media (max-width:720px){
+  .brand .sub{display:none;}
+  .deck-label{min-width:0; width:100%;}
+  .badge{font-size:10px; padding:4px 8px;}
+}
+@media (max-width:520px){
+  .btn{padding:10px 12px; font-size:12px;}
+  .brackets svg{width:24px;height:24px;}
+}
+
+/* reduced motion */
+@media (prefers-reduced-motion: reduce){
+  #bg-fx .halftone, #bg-fx .speedlines, .scan, .badge.status.rec, .brackets svg{animation:none !important;}
+}
+</style>
+</head>
+<body class="ultra">
+
+<div id="bg-fx"><div class="halftone"></div><div class="speedlines"></div></div>
+
+<div class="app-shell">
+
+  <!-- ============ HEADER ============ -->
+  <header class="mech-header">
+    <div class="brand">
+      <span class="glyph">GHOST // CAM</span>
+      <span class="sub">MK.VII CAPTURE UNIT · 録画装置</span>
+    </div>
+    <div class="badge-row">
+      <span class="badge status idle" id="statusBadge"><span class="dot"></span><b id="statusText">IDLE</b></span>
+      <span class="badge">MODE&nbsp;<b id="modeBadge">WEBCAM</b></span>
+      <span class="badge">RES&nbsp;<b>1280×720</b></span>
+      <span class="badge">FPS&nbsp;<b id="fpsBadge">--</b></span>
+      <span class="badge">REC&nbsp;<b id="timerBadge">00:00</b></span>
+    </div>
+  </header>
+
+  <!-- ============ VIEWPORT ============ -->
+  <div class="viewport-wrap">
+    <div class="viewport-frame" id="viewportFrame">
+      <canvas id="stage" width="1280" height="720"></canvas>
+
+      <div class="viewport-placeholder" id="placeholder">
+        <div class="kanji">待機</div>
+        <p>NO SIGNAL — SELECT SOURCE BELOW AND ENGAGE WEBCAM OR SCREEN TO LINK THE FEED.</p>
+      </div>
+
+      <div class="scan" id="scanEl"></div>
+      <div class="brackets">
+        <svg class="tl" viewBox="0 0 34 34"><path d="M2 20 L2 2 L20 2"/></svg>
+        <svg class="tr" viewBox="0 0 34 34"><path d="M2 20 L2 2 L20 2"/></svg>
+        <svg class="bl" viewBox="0 0 34 34"><path d="M2 20 L2 2 L20 2"/></svg>
+        <svg class="br" viewBox="0 0 34 34"><path d="M2 20 L2 2 L20 2"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ CONTROL DECK ============ -->
+  <div class="deck">
+
+    <div class="deck-row">
+      <span class="deck-label">SOURCE</span>
+      <button class="btn cyan active" id="btnWebcam" data-mode="webcam">◈ WEBCAM</button>
+      <button class="btn cyan" id="btnScreen" data-mode="screen">◈ SCREEN</button>
+      <button class="btn amber" id="btnLink">▶ ENGAGE FEED</button>
+      <div class="divider"></div>
+      <button class="btn cyan active" id="btnFrame">☰ HUD FRAME: ON</button>
+    </div>
+
+    <div class="deck-row">
+      <span class="deck-label">CAPTURE</span>
+      <button class="btn magenta" id="btnRec" disabled>● START RECORDING</button>
+      <button class="btn magenta" id="btnStop" disabled>■ STOP</button>
+      <button class="btn cyan" id="btnDownload" disabled>⇩ DOWNLOAD .WEBM</button>
+      <div class="divider"></div>
+      <button class="btn amber" id="btnFps">FPS TARGET: 30</button>
+      <button class="btn amber" id="btnPower">⚡ ULTRA ANIME MODE</button>
+    </div>
+
+    <div class="log" id="log">
+      <div><b>&gt;</b> SYSTEM READY. AWAITING SOURCE LINK…</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- DOM refs ---------------- */
+  const $ = id => document.getElementById(id);
+  const stage        = $('stage');
+  const ctx          = stage.getContext('2d', { alpha:false, desynchronized:true });
+  const viewportFrame = $('viewportFrame');
+  const placeholder  = $('placeholder');
+  const scanEl       = $('scanEl');
+
+  const statusBadge = $('statusBadge'), statusText = $('statusText');
+  const modeBadge   = $('modeBadge'), fpsBadge = $('fpsBadge'), timerBadge = $('timerBadge');
+
+  const btnWebcam = $('btnWebcam'), btnScreen = $('btnScreen'), btnLink = $('btnLink');
+  const btnFrame  = $('btnFrame');
+  const btnRec = $('btnRec'), btnStop = $('btnStop'), btnDownload = $('btnDownload');
+  const btnFps = $('btnFps'), btnPower = $('btnPower');
+  const logEl = $('log');
+
+  /* ---------------- state ---------------- */
+  const CW = 1280, CH = 720; // fixed 720p encode target
+  let mode        = 'webcam';   // 'webcam' | 'screen'
+  let sourceStream = null;
+  let sourceVideo  = null;      // hidden <video> playing the source
+  let frameOn      = true;
+  let targetFps    = 30;
+  let ultraMode    = true;
+  let drawing      = false;
+  let rafId        = null;
+
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let recording = false;
+  let recStartTs = 0, recTimerId = null;
+  let downloadUrl = null;
+
+  // fps measurement (rolling)
+  let fpsHistory = [];
+  let lastFrameT = performance.now();
+  let lastBadgeUpdate = 0;
+
+  /* ---------------- log helper ---------------- */
+  function log(msg){
+    const line = document.createElement('div');
+    const t = new Date().toLocaleTimeString('en-GB',{hour12:false});
+    line.innerHTML = '<b>['+t+']</b> ' + msg;
+    logEl.appendChild(line);
+    while(logEl.children.length > 5) logEl.removeChild(logEl.firstChild);
+  }
+
+  function setStatus(kind, text){
+    statusBadge.className = 'badge status ' + kind;
+    statusText.textContent = text;
+  }
+
+  /* ---------------- hidden source video element ---------------- */
+  function makeVideoEl(){
+    const v = document.createElement('video');
+    v.playsInline = true; v.muted = true; v.autoplay = true;
+    v.style.display = 'none';
+    document.body.appendChild(v);
+    return v;
+  }
+
+  /* ---------------- source acquisition ---------------- */
+  async function stopSource(){
+    if(sourceStream){
+      sourceStream.getTracks().forEach(t=>t.stop());
+      sourceStream = null;
+    }
+    if(sourceVideo){
+      sourceVideo.pause();
+      sourceVideo.remove();
+      sourceVideo = null;
+    }
+  }
+
+  async function engageSource(){
+    if(recording){ log('CANNOT SWITCH SOURCE WHILE RECORDING.'); return; }
+    await stopSource();
+    stopDrawLoop();
+    setStatus('idle','LINKING…');
+
+    try{
+      if(mode === 'webcam'){
+        sourceStream = await navigator.mediaDevices.getUserMedia({
+          video:{ width:{ideal:1280}, height:{ideal:720}, facingMode:'user' },
+          audio:true
+        });
+        log('WEBCAM LINK ESTABLISHED.');
+      } else {
+        if(!navigator.mediaDevices.getDisplayMedia){
+          throw new Error('getDisplayMedia unsupported on this browser/device.');
+        }
+        sourceStream = await navigator.mediaDevices.getDisplayMedia({
+          video:{ frameRate:{ideal:targetFps} },
+          audio:true
+        });
+        log('SCREEN LINK ESTABLISHED.');
+        // if user stops sharing via the browser's own UI
+        sourceStream.getVideoTracks()[0].addEventListener('ended', ()=>{
+          log('SCREEN SHARE ENDED BY SYSTEM.');
+          teardownFeed();
+        });
+      }
+
+      sourceVideo = makeVideoEl();
+      sourceVideo.srcObject = sourceStream;
+      await sourceVideo.play();
+
+      placeholder.style.display = 'none';
+      setStatus('live','LIVE');
+      modeBadge.textContent = mode.toUpperCase();
+      btnRec.disabled = false;
+      startDrawLoop();
+
+    }catch(err){
+      console.error(err);
+      setStatus('err','ERROR');
+      log('LINK FAILED: ' + (err.message || err));
+      placeholder.style.display = 'flex';
+    }
+  }
+
+  function teardownFeed(){
+    stopSource();
+    stopDrawLoop();
+    placeholder.style.display = 'flex';
+    setStatus('idle','IDLE');
+    btnRec.disabled = true;
+    ctx.fillStyle = '#04060a';
+    ctx.fillRect(0,0,CW,CH);
+  }
+
+  /* ---------------- draw / composite loop ---------------- */
+  function startDrawLoop(){
+    if(drawing) return;
+    drawing = true;
+    lastFrameT = performance.now();
+    rafId = requestAnimationFrame(drawFrame);
+  }
+  function stopDrawLoop(){
+    drawing = false;
+    if(rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+
+  function drawFrame(now){
+    if(!drawing) return;
+
+    // fps measurement
+    const dt = now - lastFrameT;
+    lastFrameT = now;
+    if(dt > 0){
+      fpsHistory.push(1000/dt);
+      if(fpsHistory.length > 30) fpsHistory.shift();
+    }
+    if(now - lastBadgeUpdate > 300){
+      lastBadgeUpdate = now;
+      const avg = fpsHistory.reduce((a,b)=>a+b,0) / (fpsHistory.length||1);
+      fpsBadge.textContent = Math.round(avg) || '--';
+    }
+
+    if(sourceVideo && sourceVideo.readyState >= 2){
+      drawCover(sourceVideo, sourceVideo.videoWidth, sourceVideo.videoHeight);
+      if(frameOn) drawOverlay(now);
+    }
+
+    rafId = requestAnimationFrame(drawFrame);
+  }
+
+  // draw the source video into the canvas using "cover" fit (crop to fill 1280x720)
+  function drawCover(video, vw, vh){
+    if(!vw || !vh){ vw = CW; vh = CH; }
+    const srcRatio = vw / vh, dstRatio = CW / CH;
+    let sx=0, sy=0, sw=vw, sh=vh;
+    if(srcRatio > dstRatio){
+      sw = vh * dstRatio;
+      sx = (vw - sw) / 2;
+    } else {
+      sh = vw / dstRatio;
+      sy = (vh - sh) / 2;
+    }
+    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, CW, CH);
+  }
+
+  // cheap 2D HUD overlay baked into the recorded stream
+  function drawOverlay(now){
+    // vignette corners (cheap gradient, cached-free but low cost at 720p)
+    ctx.save();
+
+    // thin cyan frame line
+    ctx.strokeStyle = 'rgba(0,240,255,0.55)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(4,4,CW-8,CH-8);
+
+    // corner ticks
+    ctx.strokeStyle = recording ? 'rgba(255,46,109,0.9)' : 'rgba(0,240,255,0.85)';
+    ctx.lineWidth = 4;
+    const L = 34, pad = 10;
+    ctx.beginPath();
+    ctx.moveTo(pad, pad+L); ctx.lineTo(pad, pad); ctx.lineTo(pad+L, pad);
+    ctx.moveTo(CW-pad-L, pad); ctx.lineTo(CW-pad, pad); ctx.lineTo(CW-pad, pad+L);
+    ctx.moveTo(pad, CH-pad-L); ctx.lineTo(pad, CH-pad); ctx.lineTo(pad+L, CH-pad);
+    ctx.moveTo(CW-pad-L, CH-pad); ctx.lineTo(CW-pad, CH-pad); ctx.lineTo(CW-pad, CH-pad-L);
+    ctx.stroke();
+
+    // timestamp + label strip (bottom-left)
+    ctx.font = '600 20px "Share Tech Mono", monospace';
+    ctx.fillStyle = 'rgba(234,246,255,0.92)';
+    ctx.textBaseline = 'alphabetic';
+    const stamp = new Date().toLocaleTimeString('en-GB',{hour12:false});
+    ctx.fillText('GHOST//CAM  ' + stamp, 26, CH-24);
+
+    // mode tag (top-right)
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(0,240,255,0.85)';
+    ctx.fillText(mode.toUpperCase() + ' · 720p', CW-26, 40);
+    ctx.textAlign = 'left';
+
+    // REC indicator
+    if(recording){
+      const blink = Math.floor(now/500) % 2 === 0;
+      if(blink){
+        ctx.fillStyle = '#ff2e6d';
+        ctx.beginPath(); ctx.arc(40, 44, 8, 0, Math.PI*2); ctx.fill();
+      }
+      ctx.fillStyle = '#ff2e6d';
+      ctx.font = '700 20px "Share Tech Mono", monospace';
+      ctx.fillText('REC', 56, 51);
+    }
+
+    ctx.restore();
+  }
+
+  /* ---------------- recording ---------------- */
+  function pickMimeType(){
+    const options = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm'
+    ];
+    for(const o of options){
+      if(window.MediaRecorder && MediaRecorder.isTypeSupported(o)) return o;
+    }
+    return '';
+  }
+
+  function startRecording(){
+    if(!sourceVideo){ log('NO SOURCE LINKED.'); return; }
+    try{
+      const canvasStream = stage.captureStream(targetFps);
+      const audioTracks = sourceStream ? sourceStream.getAudioTracks() : [];
+      const mixed = new MediaStream([
+        ...canvasStream.getVideoTracks(),
+        ...audioTracks
+      ]);
+
+      const mimeType = pickMimeType();
+      mediaRecorder = new MediaRecorder(mixed, mimeType ? { mimeType, videoBitsPerSecond: 4_000_000 } : undefined);
+      recordedChunks = [];
+
+      mediaRecorder.ondataavailable = e => { if(e.data && e.data.size) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = finalizeRecording;
+
+      mediaRecorder.start(1000); // 1s timeslice chunks
+      recording = true;
+      recStartTs = performance.now();
+      recTimerId = setInterval(updateTimer, 250);
+
+      viewportFrame.classList.add('armed');
+      setStatus('rec','RECORDING');
+      btnRec.disabled = true; btnStop.disabled = false;
+      btnDownload.disabled = true;
+      log('RECORDING STARTED @ ' + targetFps + 'FPS / 720p.');
+    }catch(err){
+      console.error(err);
+      log('RECORDER FAILED TO START: ' + (err.message||err));
+    }
+  }
+
+  function stopRecording(){
+    if(mediaRecorder && recording){
+      mediaRecorder.stop();
+    }
+  }
+
+  function finalizeRecording(){
+    recording = false;
+    clearInterval(recTimerId);
+    viewportFrame.classList.remove('armed');
+    setStatus('live','LIVE');
+    btnRec.disabled = false; btnStop.disabled = true;
+
+    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/webm' });
+    if(downloadUrl) URL.revokeObjectURL(downloadUrl);
+    downloadUrl = URL.createObjectURL(blob);
+    btnDownload.disabled = false;
+    log('RECORDING SAVED · ' + (blob.size/1024/1024).toFixed(2) + ' MB · READY FOR DOWNLOAD.');
+  }
+
+  function updateTimer(){
+    const s = Math.floor((performance.now() - recStartTs)/1000);
+    const mm = String(Math.floor(s/60)).padStart(2,'0');
+    const ss = String(s%60).padStart(2,'0');
+    timerBadge.textContent = mm+':'+ss;
+  }
+
+  function downloadRecording(){
+    if(!downloadUrl) return;
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = 'ghostcam_' + Date.now() + '.webm';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    log('DOWNLOAD TRIGGERED.');
+  }
+
+  /* ---------------- UI wiring ---------------- */
+  function selectMode(newMode){
+    mode = newMode;
+    btnWebcam.classList.toggle('active', mode==='webcam');
+    btnScreen.classList.toggle('active', mode==='screen');
+  }
+
+  btnWebcam.addEventListener('click', ()=> selectMode('webcam'));
+  btnScreen.addEventListener('click', ()=> selectMode('screen'));
+  btnLink.addEventListener('click', engageSource);
+
+  btnFrame.addEventListener('click', ()=>{
+    frameOn = !frameOn;
+    btnFrame.classList.toggle('active', frameOn);
+    btnFrame.textContent = '☰ HUD FRAME: ' + (frameOn ? 'ON' : 'OFF');
+  });
+
+  btnRec.addEventListener('click', startRecording);
+  btnStop.addEventListener('click', stopRecording);
+  btnDownload.addEventListener('click', downloadRecording);
+
+  btnFps.addEventListener('click', ()=>{
+    targetFps = targetFps === 30 ? 60 : 30;
+    btnFps.textContent = 'FPS TARGET: ' + targetFps;
+    log('ENCODE TARGET SET TO ' + targetFps + 'FPS.');
+  });
+
+  btnPower.addEventListener('click', ()=>{
+    ultraMode = !ultraMode;
+    document.body.classList.toggle('low-power', !ultraMode);
+    btnPower.classList.toggle('active', ultraMode);
+    btnPower.textContent = ultraMode ? '⚡ ULTRA ANIME MODE' : '⚡ LOW-POWER MODE';
+    log(ultraMode ? 'ULTRA ANIME MODE ENGAGED.' : 'LOW-POWER MODE ENGAGED — EFFECTS REDUCED.');
+  });
+
+  window.addEventListener('beforeunload', ()=>{ stopSource(); });
+  document.addEventListener('visibilitychange', ()=>{
+    // pause the ambient draw loop cost when tab hidden and not recording
+    if(document.hidden && !recording){ stopDrawLoop(); }
+    else if(!document.hidden && sourceVideo && !drawing){ startDrawLoop(); }
+  });
+
+  // initial paint
+  ctx.fillStyle = '#04060a';
+  ctx.fillRect(0,0,CW,CH);
+  btnPower.classList.add('active');
+})();
+</script>
+</body>
+</html>

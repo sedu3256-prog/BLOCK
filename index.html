@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>GHOST//CAM — MK.VII RECORDER UNIT</title>
+<title>GHOST//CAM — CAMERA RECORDER</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Chakra+Petch:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
@@ -260,7 +260,7 @@ body.low-power .btn.amber.active{box-shadow:none;}
 
       <div class="viewport-placeholder" id="placeholder">
         <div class="kanji">待機</div>
-        <p>NO SIGNAL — SELECT SOURCE BELOW AND ENGAGE WEBCAM OR SCREEN TO LINK THE FEED.</p>
+        <p>NO SIGNAL — SELECT SOURCE AND TAP ENGAGE CAMERA. CAMERA PERMISSION IS REQUIRED.</p>
       </div>
 
       <div class="scan" id="scanEl"></div>
@@ -280,7 +280,8 @@ body.low-power .btn.amber.active{box-shadow:none;}
       <span class="deck-label">SOURCE</span>
       <button class="btn cyan active" id="btnWebcam" data-mode="webcam">◈ WEBCAM</button>
       <button class="btn cyan" id="btnScreen" data-mode="screen">◈ SCREEN</button>
-      <button class="btn amber" id="btnLink">▶ ENGAGE FEED</button>
+      <button class="btn amber" id="btnLink">▶ ENGAGE CAMERA</button>
+      <button class="btn cyan" id="btnMic">🎙 MIC: OFF</button>
       <div class="divider"></div>
       <button class="btn cyan active" id="btnFrame">☰ HUD FRAME: ON</button>
     </div>
@@ -318,6 +319,7 @@ body.low-power .btn.amber.active{box-shadow:none;}
   const modeBadge   = $('modeBadge'), fpsBadge = $('fpsBadge'), timerBadge = $('timerBadge');
 
   const btnWebcam = $('btnWebcam'), btnScreen = $('btnScreen'), btnLink = $('btnLink');
+  const btnMic = $('btnMic');
   const btnFrame  = $('btnFrame');
   const btnRec = $('btnRec'), btnStop = $('btnStop'), btnDownload = $('btnDownload');
   const btnFps = $('btnFps'), btnPower = $('btnPower');
@@ -339,6 +341,7 @@ body.low-power .btn.amber.active{box-shadow:none;}
   let recording = false;
   let recStartTs = 0, recTimerId = null;
   let downloadUrl = null;
+   let micOn = false;
 
   // fps measurement (rolling)
   let fpsHistory = [];
@@ -389,9 +392,12 @@ body.low-power .btn.amber.active{box-shadow:none;}
 
     try{
       if(mode === 'webcam'){
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+          throw new Error('Camera API unavailable. Open this page over HTTPS in a supported browser.');
+        }
         sourceStream = await navigator.mediaDevices.getUserMedia({
           video:{ width:{ideal:1280}, height:{ideal:720}, facingMode:'user' },
-          audio:true
+          audio:false
         });
         log('WEBCAM LINK ESTABLISHED.');
       } else {
@@ -423,7 +429,8 @@ body.low-power .btn.amber.active{box-shadow:none;}
     }catch(err){
       console.error(err);
       setStatus('err','ERROR');
-      log('LINK FAILED: ' + (err.message || err));
+      const reason = err && err.name === 'NotAllowedError' ? 'CAMERA PERMISSION DENIED — ALLOW CAMERA FOR THIS SITE.' : (err.message || err);
+      log('LINK FAILED: ' + reason);
       placeholder.style.display = 'flex';
     }
   }
@@ -539,6 +546,41 @@ body.low-power .btn.amber.active{box-shadow:none;}
     ctx.restore();
   }
 
+  /* ---------------- microphone ---------------- */
+  async function toggleMic(){
+    if(!sourceStream){
+      log('LINK THE CAMERA FIRST.');
+      return;
+    }
+    if(micOn){
+      if(micStream) micStream.getTracks().forEach(t=>t.stop());
+      micStream = null;
+      micOn = false;
+      btnMic.textContent = '🎙 MIC: OFF';
+      btnMic.classList.remove('active');
+      log('MICROPHONE OFF.');
+      return;
+    }
+    try{
+      micStream = await navigator.mediaDevices.getUserMedia({audio:true, video:false});
+      micOn = true;
+      btnMic.textContent = '🎙 MIC: ON';
+      btnMic.classList.add('active');
+      log('MICROPHONE LINK ESTABLISHED.');
+    }catch(err){
+      console.error(err);
+      if(err && err.name === 'NotAllowedError'){
+        log('MIC PERMISSION DENIED — CAMERA IS STILL WORKING.');
+      } else {
+        log('MIC FAILED: ' + (err.message || err));
+      }
+      micOn = false;
+      micStream = null;
+      btnMic.textContent = '🎙 MIC: OFF';
+      btnMic.classList.remove('active');
+    }
+  }
+
   /* ---------------- recording ---------------- */
   function pickMimeType(){
     const options = [
@@ -556,7 +598,9 @@ body.low-power .btn.amber.active{box-shadow:none;}
     if(!sourceVideo){ log('NO SOURCE LINKED.'); return; }
     try{
       const canvasStream = stage.captureStream(targetFps);
-      const audioTracks = sourceStream ? sourceStream.getAudioTracks() : [];
+      const audioTracks = [];
+       if(micStream) audioTracks.push(...micStream.getAudioTracks());
+       if(mode === 'screen' && sourceStream) audioTracks.push(...sourceStream.getAudioTracks());
       const mixed = new MediaStream([
         ...canvasStream.getVideoTracks(),
         ...audioTracks
@@ -633,6 +677,8 @@ body.low-power .btn.amber.active{box-shadow:none;}
   btnWebcam.addEventListener('click', ()=> selectMode('webcam'));
   btnScreen.addEventListener('click', ()=> selectMode('screen'));
   btnLink.addEventListener('click', engageSource);
+  btnMic.addEventListener('click', toggleMic);
+  btnMic.disabled = true;
 
   btnFrame.addEventListener('click', ()=>{
     frameOn = !frameOn;
@@ -673,3 +719,4 @@ body.low-power .btn.amber.active{box-shadow:none;}
 </script>
 </body>
 </html>
+
